@@ -12,8 +12,8 @@ class DummySiswaSeeder extends Seeder
 {
     public function run(): void
     {
-        $count = 404;
-        $fixedSmaId = 1;
+        $count = 77;
+        $fixedSmaId = 8;
         $fixedJalurId = 1;
 
         // 🚨 (Opsional) Pastikan data relasi ID 1 ada

@@ -16,15 +16,19 @@
 @endphp
 <div class="hidden lg:flex min-h-screen">
     <aside class="w-64 bg-blue-700 text-white flex flex-col fixed h-screen">
-        <div class="p-6 flex items-center justify-center">
-            <x-application-logo class="h-8 w-auto fill-current text-white" />
+        <div>
+            <img src="{{ asset('assets/logo_app_3.png') }}" 
+                alt="Logo Aplikasi" 
+                class="md:w-[50%] w-[50%] md:mt-5 md:mb-1 mb-0 mt-[30%] object-contain mx-auto" />
         </div>
 
         <div class="w-full grid place-items-center">
-            <div class="relative w-20">
-                <img src="{{ $siswa && $siswa->foto ? asset('storage/' . $siswa->foto) : asset('storage/profile_murid/avatar_empty.jpg') }}" alt=""
-                class="rounded-full">
-            </div>
+            <a href="{{ route('profile.settings') }}">
+                <div class="relative w-20">
+                    <img src="{{ $siswa && $siswa->foto ? asset('storage/' . $siswa->foto) : asset('storage/profile_murid/avatar_empty.jpg') }}" alt=""
+                    class="rounded-full">
+                </div>
+            </a>
 
             <a href="{{ route('profile.settings') }}" class="mt-2 font-black text-center hover:underline">
                 {{ Auth::user()->name }}
@@ -36,13 +40,9 @@
             <ul class="space-y-4">
                 <li>
                     @php
-                        // 🚨 KUNCI: Tentukan rute berdasarkan status has_completed_steps
-                        // Pastikan variabel $siswa tersedia dan objek Siswa sudah dimuat.
                         $targetRoute = (Auth::user()->siswa && Auth::user()->siswa->has_completed_steps) 
                                         ? route('setelah.dashboard.show') 
                                         : route('dashboard');
-                        
-                        // Cek apakah rute saat ini cocok dengan salah satu rute yang disorot
                         $isActive = request()->routeIs('dashboard') || request()->routeIs('setelah.dashboard.show');
                     @endphp
 
@@ -56,12 +56,30 @@
                     </a>
                 </li>
                 <li>
-                    <a href="{{ $targetRoute }}" class="flex items-center px-3 py-2 rounded-lg
+                    <a href="{{ route('pendaftaran_sma') }}" class="flex items-center px-3 py-2 rounded-lg
                     {{ request()->routeIs('pendaftaran_sma') || request()->routeIs('pendaftaran.sma.timeline') || request()->routeIs('jalur_pendaftaran') || request()->routeIs('siswa.peringkat') ? 'bg-blue-800' : 'bg-blue-700 hover:bg-blue-600' }}">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
                             <path fill="currentColor" d="M13 19c0 1.1.3 2.12.81 3H6c-1.11 0-2-.89-2-2V4a2 2 0 0 1 2-2h1v7l2.5-1.5L12 9V2h6a2 2 0 0 1 2 2v9.09c-.33-.05-.66-.09-1-.09c-3.31 0-6 2.69-6 6m10 0l-3-3v2h-4v2h4v2z"/>
                         </svg>
                         <span class="ml-3">Pendaftaran SMA</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ route('alur.index') }}" class="flex items-center px-3 py-2 rounded-lg
+                    {{ request()->routeIs('alur.index') ? 'bg-blue-800' : 'bg-blue-700 hover:bg-blue-600' }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-6">
+                        <path fill-rule="evenodd" d="M1.75 2a.75.75 0 0 0 0 1.5H2V9a2 2 0 0 0 2 2h.043l-1.005 3.013a.75.75 0 0 0 1.423.474L4.624 14h6.752l.163.487a.75.75 0 0 0 1.423-.474L11.957 11H12a2 2 0 0 0 2-2V3.5h.25a.75.75 0 0 0 0-1.5H1.75Zm8.626 9 .5 1.5H5.124l.5-1.5h4.752Zm1.317-5.833a.75.75 0 0 0-.892-1.206 8.789 8.789 0 0 0-2.465 2.814L7.28 5.72a.75.75 0 0 0-1.06 0l-2 2a.75.75 0 0 0 1.06 1.06l1.47-1.47L8.028 8.59a.75.75 0 0 0 1.228-.255 7.275 7.275 0 0 1 2.437-3.167Z" clip-rule="evenodd" />
+                        </svg>
+                        <span class="ml-3">Alur SPMB</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ route('juknis.index') }}" class="flex items-center px-3 py-2 rounded-lg
+                    {{ request()->routeIs('juknis.index') ? 'bg-blue-800' : 'bg-blue-700 hover:bg-blue-600' }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-6">
+                        <path d="M3.75 2a.75.75 0 0 0-.75.75v10.5a.75.75 0 0 0 1.28.53L8 10.06l3.72 3.72a.75.75 0 0 0 1.28-.53V2.75a.75.75 0 0 0-.75-.75h-8.5Z" />
+                        </svg>
+                        <span class="ml-3">Juknis SPMB</span>
                     </a>
                 </li>
                 <li>
@@ -85,7 +103,7 @@
                 <li>
                     <form action="{{ route('logout') }}" method="POST">
                         @csrf
-                        <button type="submit" class="w-full flex items-center px-3 py-2 rounded-lg hover:bg-blue-600 bg-blue-700">
+                        <button type="submit" class="w-full flex items-center px-3 py-2 rounded-lg hover:bg-red-600 bg-red-900">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-6">
                                 <path fill-rule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25Zm-4.28 9.22a.75.75 0 0 0 0 1.06l3 3a.75.75 0 1 0 1.06-1.06l-1.72-1.72h5.69a.75.75 0 0 0 0-1.5h-5.69l1.72-1.72a.75.75 0 0 0-1.06-1.06l-3 3Z" clip-rule="evenodd" />
                             </svg>

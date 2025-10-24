@@ -10,6 +10,7 @@ use App\Models\JalurPendaftaran;
 use App\Traits\LogsStudentActions;
 use Illuminate\Support\Facades\DB;
 use App\Models\NotificationHistory;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Validation\ValidationException;
@@ -65,6 +66,14 @@ class AdminSekolahController extends Controller
         $total_zonasi = 0;
         $total_ditolak_sertifikat = 0;
         $total_ditolak_afirmasi = 0; 
+
+        $total_pending_verifikasi = 0;
+
+        $total_ditolak_akta = 0;
+        $total_ditolak_rapor = 0;
+        $total_ditolak_skl = 0;
+        $total_ditolak_ijazah = 0;
+        $total_ditolak_pernyataan = 0;
         
         if ($admin->sma_data_id) {
             $siswas = Siswa::with('user', 'DataSma')->whereHas('DataSma', function ($query) use ($admin) {
@@ -79,8 +88,33 @@ class AdminSekolahController extends Controller
 
             $total_ditolak_sertifikat = $siswas->where('verifikasi_sertifikat', 'ditolak')->count();
             $total_ditolak_afirmasi = $siswas->where('verifikasi_afirmasi', 'ditolak')->count();
+
+            $total_ditolak_akta = $siswas->where('akta_file_verified', 'ditolak')->count();
+            $total_ditolak_rapor = $siswas->where('rapor_files_verified', 'ditolak')->count();
+            // SKL (Surat Keterangan Lulus)
+            $total_ditolak_skl = $siswas->where('surat_keterangan_lulus_verified', 'ditolak')->count();
+            $total_ditolak_ijazah = $siswas->where('ijazah_file_verified', 'ditolak')->count();
+            // Surat Pernyataan
+            $total_ditolak_pernyataan = $siswas->where('surat_pernyataan_verified', 'ditolak')->count();
+
+            $total_pending_verifikasi = $siswas->where('status_pendaftaran', 'pending')->count();
+
         }
-        return view('admin_sekolah.dashboard', compact('siswas', 'total_siswa', 'total_prestasi', 'total_afirmasi', 'total_zonasi', 'total_ditolak_sertifikat', 'total_ditolak_afirmasi'));
+        return view('admin_sekolah.dashboard', compact(
+            'siswas', 
+            'total_siswa', 
+            'total_prestasi', 
+            'total_afirmasi', 
+            'total_zonasi', 
+            'total_ditolak_sertifikat', 
+            'total_ditolak_afirmasi',
+            'total_ditolak_akta',
+            'total_ditolak_rapor',
+            'total_ditolak_skl',
+            'total_ditolak_ijazah',
+            'total_ditolak_pernyataan',
+            'total_pending_verifikasi'
+        ));
     }
     
     public function showStudentsByJalur($jalur_id)
@@ -160,6 +194,134 @@ class AdminSekolahController extends Controller
         }
         return view('admin_sekolah.jalur_pendaftaran', compact('jalurs', 'siswas'));
     }
+
+    public function showSiswaDetail(Siswa $siswa)
+    {
+        // Pastikan siswa ini terdaftar di SMA admin yang sedang login (jika perlu)
+        if (Auth::user()->role === 'admin_sma' && $siswa->data_sma_id !== Auth::user()->sma->id) {
+            abort(403, 'Akses ditolak. Siswa bukan dari SMA Anda.');
+        }
+
+        // Load semua relasi yang diperlukan untuk detail view
+        $siswa->load(['user', 'sekolahAsal', 'ortu', 'raporFiles.semester', 'timelineProgress']);
+
+        return view('admin_sekolah.siswa_detail', compact('siswa')); // Ganti dengan nama view detail Anda
+    }
+
+    // 🔥 Fungsi Baru: Verifikasi Dokumen Umum 🔥
+    public function verifikasiDokumen(Request $request, Siswa $siswa, string $dokumen)
+    {
+        // 1. Tentukan pemetaan nama dokumen ke Kolom Database
+        $mapping = [
+            'akta' => ['col_file' => 'akta_file', 'col_verified' => 'akta_file_verified'],
+            'rapor' => ['col_file' => 'rapor_files', 'col_verified' => 'rapor_files_verified'],
+            'surat_pernyataan' => ['col_file' => 'surat_pernyataan', 'col_verified' => 'surat_pernyataan_verified'],
+            'surat_keterangan_lulus' => ['col_file' => 'surat_keterangan_lulus', 'col_verified' => 'surat_keterangan_lulus_verified'],
+            'ijazah' => ['col_file' => 'ijazah_file', 'col_verified' => 'ijazah_file_verified'],
+            // Catatan: Sertifikat dan Afirmasi harus menggunakan route verifikasi khusus
+        ];
+
+        $documentLabels = [
+            'akta' => 'Akta Kelahiran',
+            'rapor' => 'Rapor Files',
+            'surat_pernyataan' => 'Surat Pernyataan',
+            'surat_keterangan_lulus' => 'SKL',
+            'ijazah' => 'Ijazah',
+        ];
+
+        // 2. Validasi Nama Dokumen
+        if (!isset($mapping[$dokumen])) {
+            return back()->with('error', 'Jenis dokumen tidak valid untuk verifikasi umum.');
+        }
+        
+        $columnFile = $mapping[$dokumen]['col_file'];
+        $columnVerified = $mapping[$dokumen]['col_verified'];
+        $documentLabel = $documentLabels[$dokumen];
+
+        // 3. Validasi Status
+        $request->validate(['status' => 'required|in:terverifikasi,ditolak']);
+        $status = $request->input('status');
+        $verificationColumnsToCheck = array_column($mapping, 'col_verified');
+        
+        try {
+            DB::transaction(function () use ($siswa, $columnFile, $columnVerified, $status, $dokumen, $documentLabel, $verificationColumnsToCheck) {
+                
+                // 🔥 Cek apakah file yang bersangkutan sudah diunggah (Wajib)
+                // Khusus Rapor, cek harus lebih spesifik (apakah ada record di raporFiles yang punya file)
+                $isFileUploaded = ($dokumen === 'rapor') 
+                    ? $siswa->raporFiles()->whereNotNull('file_rapor')->exists() 
+                    : !empty($siswa->{$columnFile});
+                
+                if (!$isFileUploaded) {
+                    // Jangan izinkan verifikasi jika file fisiknya belum diunggah
+                    throw new \Exception('Dokumen ' . $dokumen . ' belum diunggah atau path-nya kosong.');
+                }
+                
+                // 4. Update Status di Database
+                $siswa->{$columnVerified} = $status;
+                $siswa->save();
+
+                if ($status === 'terverifikasi') {
+                    // Notifikasi sukses per dokumen
+                    $this->createNotification(
+                        $siswa->user_id, 
+                        'success', 
+                        "Dokumen $documentLabel Anda telah berhasil diverifikasi."
+                    );
+                    
+                    $allVerified = true;
+                    
+                    // 5. Cek apakah SEMUA dokumen wajib sudah terverifikasi
+                    foreach ($verificationColumnsToCheck as $col) {
+                        if ($siswa->{$col} !== 'terverifikasi') {
+                            $allVerified = false;
+                            break;
+                        }
+                    }
+
+                    if ($allVerified) {
+                        // Notifikasi KELULUSAN ADMINISTRASI (Semua dokumen terverifikasi)
+                        $this->createNotification(
+                            $siswa->user_id, 
+                            'success', 
+                            "🎉 Selamat! Syarat Administrasi Lengkap! Semua dokumen wajib Anda telah terverifikasi. Anda memenuhi syarat untuk masuk ke tahapan seleksi berikutnya."
+                        );
+                    }
+
+                } elseif ($status === 'ditolak') {
+                    
+                    // Notifikasi Ditolak (Sederhana, hanya fokus pada dokumen yang ditolak)
+                    $message = "Mohon maaf, dokumen $documentLabel Anda telah Ditolak. Silakan periksa kembali dan unggah ulang dokumen yang benar/jelas. Status pendaftaran Anda saat ini akan tetap berlanjut ke seleksi dengan status administrasi belum lengkap.";
+
+                    $this->createNotification(
+                        $siswa->user_id, 
+                        'error', 
+                        $message
+                    );
+                }
+                
+                // 5. Log Aksi
+                // Asumsi $this->logAction() tersedia
+                // $this->logAction($siswa->user_id, 'Verifikasi ' . ucfirst($dokumen), 'Dokumen ' . ucfirst($dokumen) . ' siswa diubah menjadi ' . $status);
+            });
+
+            return back()->with('success', ucfirst($dokumen) . ' berhasil diubah menjadi: ' . ucfirst($status));
+        } catch (\Exception $e) {
+            Log::error('Verifikasi Dokumen Error: ' . $e->getMessage());
+            return back()->with('error', 'Gagal memproses verifikasi. ' . $e->getMessage());
+        }
+    }
+
+    private function createNotification($userId, $type, $message)
+{
+    // Asumsi: created_by_user_id tidak diperlukan untuk fungsi ini
+    NotificationHistory::create([
+        'user_id' => $userId,
+        'type' => $type, // 'success' atau 'error'
+        'message' => $message,
+        'is_read' => false,
+    ]);
+}
     
     public function verifikasiSertifikat(Request $request, Siswa $siswa)
     {
@@ -261,7 +423,7 @@ class AdminSekolahController extends Controller
         return $distance;
     }
 
-    public function indexPeringkatMurid()
+    public function indexPeringkatMurid(JalurPendaftaran $jalur)
     {
         $firstJalur = JalurPendaftaran::first();
         $jalurs = collect();
@@ -298,6 +460,12 @@ class AdminSekolahController extends Controller
             $query = Siswa::with('user', 'sekolahAsal')
                 ->where('data_sma_id', $sma_id)
                 ->where('jalur_pendaftaran_id', $jalur_id);
+
+            $query->where('akta_file_verified', 'terverifikasi')
+              ->where('rapor_files_verified', 'terverifikasi')
+              ->where('surat_pernyataan_verified', 'terverifikasi')
+              ->where('surat_keterangan_lulus_verified', 'terverifikasi')
+              ->where('ijazah_file_verified', 'terverifikasi');
 
             if ($jalur_id == 1) {
                 $query->orderBy(DB::raw("CASE 

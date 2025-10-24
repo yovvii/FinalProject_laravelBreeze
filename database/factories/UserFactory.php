@@ -43,7 +43,7 @@ class UserFactory extends Factory
     {
         return $this->afterCreating(function (User $user) {
             
-            $fixedSmaId = 1;
+            $fixedSmaId = 8;
             $fixedJalurId = 1;
             $REQUIRED_SEMESTERS = 5;
             

@@ -21,12 +21,15 @@
                                         has-[:checked]:bg-blue-200 has-[:checked]:border-none has-[:checked]:shadow-lg has-[:checked]:h-[85px] has-[:checked]:w-[101%]" data-id="{{ $jalur->id }}" data-logo="{{ $jalur->logo }}" data-nama="{{ $jalur->nama_jalur_pendaftaran }}" data-deskripsi="{{ $jalur->deskripsi }}">
                                             <input type="radio" id="jalur-{{ $jalur->id }}" name="jalur_pendaftaran_id" value="{{ $jalur->id }}" class="absolute opacity-0">
                                             <label for="jalur-{{ $jalur->id }}" class="p-4 flex items-center">
-                                                <div class="transition-all duration-200 rounded-full bg-blue-600 flex justify-center items-center h-[45px] w-[45px] group-hover:bg-white group-has-[:checked]:bg-white">
-                                                    {!! $jalur->logo_active !!}
-                                                </div>
+                                                
                                                 <div class="ml-4">
-                                                    <span class="text-lg text-gray-900 font-semibold block group-hover:text-blue-600 group-has-[:checked]:text-blue-600">{{ $jalur->nama_jalur_pendaftaran }}</span>
-                                                    <span class="text-sm text-gray-600 block group-hover:text-blue-600 group-has-[:checked]:text-blue-600">{{ Str::words($jalur->deskripsi, 10) }}</span>
+                                                    <span class="text-lg text-gray-900 font-semibold block group-hover:text-blue-600 group-has-[:checked]:text-blue-600 flex gap-x-2 items-center lg:justify-start justify-center">
+                                                        <div class="transition-all duration-200 rounded-full bg-blue-600 flex justify-center items-center h-[20px] w-[20px]">
+                                                            {!! $jalur->logo_active !!}
+                                                        </div>
+                                                        {{ $jalur->nama_jalur_pendaftaran }}
+                                                    </span>
+                                                    <span class="text-sm lg:text-left text-center text-gray-600 block group-hover:text-blue-600 group-has-[:checked]:text-blue-600">{{ Str::words($jalur->deskripsi, 10) }}</span>
                                                 </div>
                                             </label>
                                         </li>
@@ -36,7 +39,7 @@
                         </div>
 
                         <!-- Panel Deskripsi -->
-                        <div id="description-panel" class="p-4 rounded-2xl w-full bg-blue-200 flex flex-col items-center px-4">
+                        {{-- <div id="description-panel" class="p-4 rounded-2xl w-full bg-blue-200 flex flex-col items-center px-4">
                             <div id="panel-logo-container" class="rounded-full bg-blue-600 flex justify-center items-center h-[55px] w-[55px]">
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="white" class="size-8">
                                     <path d="M7.25 11.5a.75.75 0 0 0 0 1.5h1.5a.75.75 0 0 0 0-1.5h-1.5Z" />
@@ -47,7 +50,7 @@
                                 Pilih Jalur Pendaftaran</h3>
                             <p id="panel-description" class="text-center text-sm text-gray-600">
                                 Silahkan pilih salah satu jalur pendaftaran yang tersedia</p>
-                        </div>
+                        </div> --}}
                     </div>
                     
                     <div class="mt-4 text-center flex justify-center gap-3">
@@ -60,7 +63,7 @@
         </div>
     </div>
 
-    <script>
+    {{-- <script>
         document.addEventListener('DOMContentLoaded', function() {
             const panelTitle = document.getElementById('panel-title');
             const panelDescription = document.getElementById('panel-description');
@@ -92,5 +95,5 @@
                 });
             });
         });
-    </script>
+    </script> --}}
 </x-app-layout>

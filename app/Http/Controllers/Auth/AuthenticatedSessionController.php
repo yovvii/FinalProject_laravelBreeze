@@ -72,17 +72,20 @@ class AuthenticatedSessionController extends Controller
 
         // Login user
         Auth::login($user, $request->boolean('remember'));
-        $user->load('siswa');
-
+        $loggedInUser = Auth::user();
+        $loggedInUser->load('siswa');
         $request->session()->regenerate();
 
         Session::flash('first_login', true);
 
-        // dd(Session::all());
-
-        // return redirect()->intended(route('dashboard'))->with('success', 'Berhasil login!, Silahkan lanjutkan tahap selanjutnya!');
-        // return redirect()->intended(RouteServiceProvider::HOME);
-        return $this->logAndRedirect('dashboard', 'success', 'Berhasil login! Selamat datang kembali. Silahkan lanjutkan tahap selanjutnya!');
+        if ($loggedInUser->siswa && $loggedInUser->siswa->has_completed_steps) {
+            // Jika langkah sudah selesai (has_completed_steps == true/1)
+            return $this->logAndRedirect('setelah.dashboard.show', 'success', 'Berhasil login! Selamat datang kembali.');
+        } else {
+            // Jika langkah belum selesai (has_completed_steps == false/0 atau null)
+            return $this->logAndRedirect('dashboard', 'success', 'Berhasil login! Silahkan lanjutkan tahap selanjutnya!');
+        }
+        
     }
 
     /**

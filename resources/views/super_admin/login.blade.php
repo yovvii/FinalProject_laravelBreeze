@@ -18,9 +18,11 @@
         </div>
 
         <div class="flex items-center justify-end mt-4">
-            <x-primary-button>
-                {{ __('Masuk Admin') }}
-            </x-primary-button>
+            <button type="submit"
+                class="mt-5 w-full bg-blue-900 py-2 rounded-xl font-poppins text-white hover:bg-blue-800 transition duration-200">
+                {{ __('Masuk') }}
+            </button>
         </div>
+
     </form>
 </x-guest-layout>

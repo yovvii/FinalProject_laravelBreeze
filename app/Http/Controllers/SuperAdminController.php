@@ -4,11 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\Siswa;
+use App\Models\Banner;
 use App\Models\DataSma;
+use App\Models\AgeLimit;
+use App\Jobs\OpenSpmbJob;
 use App\Models\Akreditasi;
 use App\Models\SpmbStatus;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
+use App\Models\GlobalSetting;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 use App\Models\JalurPendaftaran;
 use App\Traits\LogsStudentActions;
@@ -19,6 +24,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Redirect;
+use App\Jobs\CloseSpmbJob;
 
 class SuperAdminController extends Controller
 {
@@ -299,7 +305,7 @@ class SuperAdminController extends Controller
                     $jalur = $siswa->jalurPendaftaran->nama_jalur_pendaftaran ?? 'Pendaftaran';
 
                     if ($finalStatus === 'diterima') {
-                        $message = "🎉 Selamat! Anda dinyatakan DITERIMA di {$sekolahTujuan} melalui Jalur {$jalur}. Silakan segera cek informasi daftar ulang.";
+                        $message = "🎉 Selamat! Anda dinyatakan DITERIMA di {$sekolahTujuan} melalui Jalur {$jalur}. Silakan segera cek informasi lebih lanjut.";
                         $notificationType = 'success';
                         $acceptedCount++;
                     } else {
@@ -342,6 +348,64 @@ class SuperAdminController extends Controller
             ]);
             return back()->with('error', 'Gagal menghentikan proses SPMB. Silakan cek log server.'); // <--- GANTI KE SPMB
         }
+    }
+
+    public function stopStart()
+    {
+        $spmbStatus = SpmbStatus::first();
+        
+        // Cek jika data status ada, jika tidak, inisialisasi null.
+        $startingTime = $spmbStatus ? $spmbStatus->starting_at : null; 
+        $closingTime = $spmbStatus ? $spmbStatus->closing_at : null;
+        $startingTimeIso = $startingTime ? $startingTime->toIso8601String() : null;
+        $closingTimeIso = $closingTime ? $closingTime->toIso8601String() : null;
+        
+        // Anda juga perlu variabel lain yang digunakan di view
+        $isClosed = $spmbStatus && $spmbStatus->status === 'closed';
+        
+        return view('super_admin.start_stop', compact(
+            'spmbStatus', 
+            'isClosed', 
+            'startingTime', // 🔥 Pastikan ini dikirim
+            'closingTime',   // 🔥 Pastikan ini dikirim
+            'startingTimeIso', // 🔥 Kirim ke View
+            'closingTimeIso'
+        ));
+    }
+
+    public function setSchedule(Request $request)
+    {
+        $validatedData = $request->validate([
+            'starting_at' => 'required|date|after:now', // Harus di masa depan
+            'closing_at' => 'required|date|after:starting_at',
+        ]);
+
+        $status = SpmbStatus::firstOrNew();
+        $status->starting_at = $validatedData['starting_at'];
+        $status->closing_at = $validatedData['closing_at'];
+        $status->save();
+        
+        // --- LOGIKA DISPATCH JOB ---
+
+        // PENTING: Jika ada cara untuk membatalkan Job lama (seperti dengan Job Batching/Tags), lakukan di sini.
+        // Untuk sederhana, kita akan biarkan Job lama (jika ada) terlewati jika status berubah.
+        
+        $startingTime = Carbon::parse($status->starting_at);
+        $closingTime = Carbon::parse($status->closing_at);
+
+        // 1. Dispatch Job Pembuka (ditunda sampai starting_at)
+        OpenSpmbJob::dispatch()->delay($startingTime);
+
+        // 2. Dispatch Job Penutup (ditunda sampai closing_at)
+        CloseSpmbJob::dispatch()->delay($closingTime);
+        
+        // Atur status awal ke pending/closed agar Job pembuka bisa berjalan
+        if ($status->status === 'open' && $startingTime->isFuture()) {
+             $status->status = 'closed'; // Atau 'pending', agar Job Open bisa jalan
+             $status->save();
+        }
+
+        return back()->with('success', 'Jadwal otomatis PPDB berhasil diperbarui.');
     }
 
     private function _processJalur($sma, $jalurId, $kuota)
@@ -442,6 +506,9 @@ class SuperAdminController extends Controller
                 // Pastikan Anda hanya mereset siswa yang status pendaftarannya completed
                 Siswa::whereIn('status_penerimaan', ['diterima', 'ditolak'])
                     ->update(['status_penerimaan' => null]);
+                
+                Siswa::where('result_viewed', true)
+                 ->update(['result_viewed' => false]);
             });
 
             return back()->with('success', 'Proses SPMB berhasil diatur ulang dan dimulai kembali.');
@@ -451,4 +518,145 @@ class SuperAdminController extends Controller
             return back()->with('error', 'Gagal mengatur ulang proses SPMB. Cek log server.');
         }
     }
+
+    public function indexBanner()
+    {
+        $banners = Banner::orderBy('id', 'desc')->get();
+        return view('super_admin.banner', compact('banners'));
+    }
+
+    public function storeBanner(Request $request) // 🔥 Nama fungsi diubah menjadi storeBanner
+    {
+        // 1. Validasi File Upload
+        $request->validate([
+            'image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048', 
+            'content' => 'nullable|string|max:500', 
+        ]);
+
+        // 2. Proses File Upload
+        $path = '';
+        if ($request->hasFile('image')) {
+            $file = $request->file('image');
+            // Simpan file baru di storage/app/public/banners
+            $path = $file->store('banners', 'public'); 
+        }
+        
+        // 3. 🔥 Buat record baru di database (CREATE)
+        $banner = Banner::create([
+            'image_path' => $path,
+            'content' => $request->input('content'), 
+            'is_active' => true, // Default aktif saat dibuat
+            // Tambahkan kolom lain jika ada, seperti 'urutan' atau 'link'
+        ]);
+
+        // 4. Redirect kembali ke halaman index banner
+        return redirect()->route('banner.index')->with('success', 'Banner baru berhasil ditambahkan.');
+    }
+
+    public function addBanner()
+    {
+        $banner = Banner::firstOrNew([]); 
+        return view('super_admin.banner', compact('banner')); 
+    }
+
+    public function deleteBanner(Banner $banner)
+    {
+        // 1. Hapus file fisik dari storage
+        if ($banner->image_path && Storage::disk('public')->exists($banner->image_path)) {
+            Storage::disk('public')->delete($banner->image_path);
+        }
+        
+        // 2. Hapus record dari database
+        $banner->delete();
+
+        return redirect()->route('banner.index')->with('success', 'Banner berhasil dihapus.');
+    }
+
+    public function indexUsia()
+    {
+        $ageLimit = AgeLimit::firstOrNew([], [
+            'min_age_years' => 14, 
+            'max_age_years' => 17,
+            // Atur default reference_date ke 1 Januari tahun ini
+            'reference_date' => Carbon::create(Carbon::now()->year, 1, 1), 
+        ]);
+
+        return view('super_admin.usia_siswa', compact('ageLimit'));
+    }
+
+    public function updateUsia(Request $request)
+    {
+        $request->validate([
+            'min_age_years' => 'required|integer|min:1',
+            'max_age_years' => 'required|integer|gte:min_age_years',
+            'reference_date' => 'required|date',
+        ]);
+
+        // Gunakan updateOrCreate karena hanya akan ada 1 baris
+        AgeLimit::updateOrCreate([], [
+            'min_age_years' => $request->min_age_years,
+            'max_age_years' => $request->max_age_years,
+            'reference_date' => $request->reference_date,
+        ]);
+
+        return back()->with('success', 'Batas usia siswa berhasil diperbarui.');
+    }
+
+    public function showInformasi()
+    {
+        // Ambil data, atau buat baru jika belum ada (hanya ada 1 baris)
+        $setting = GlobalSetting::firstOrNew();
+
+        return view('super_admin.informasi', compact('setting'));
+    }
+
+    public function updateInformasi(Request $request)
+    {
+        $request->validate([
+            'important_info_content' => 'nullable|string',
+            'juknis_pdf' => 'nullable|file|mimes:pdf|max:5120',
+            'alur_pendaftaran' => 'nullable|file|mimes:jpg,jpeg,png,webp|max:2048',
+        ]);
+
+        // Menggunakan updateOrCreate karena kita hanya ingin satu baris data
+        $setting = GlobalSetting::firstOrNew(['id' => 1]);
+        $data = [
+            'important_info_content' => $request->important_info_content,
+        ];
+        
+        // 3. Proses File Upload
+        if ($request->hasFile('juknis_pdf')) {
+            $file = $request->file('juknis_pdf');
+            
+            // Hapus file lama jika ada
+            if ($setting->juknis_pdf_path) {
+                Storage::disk('public')->delete($setting->juknis_pdf_path);
+            }
+            
+            // Simpan file baru di folder 'public/juknis'
+            // 'juknis' adalah nama folder di dalam direktori storage/app/public
+            $path = $file->store('juknis', 'public'); 
+            $data['juknis_pdf_path'] = $path;
+        }
+
+        if ($request->hasFile('alur_pendaftaran')) {
+            $file = $request->file('alur_pendaftaran');
+            
+            // Hapus file lama jika ada
+            if ($setting->alur_pendaftaran_path) {
+                Storage::disk('public')->delete($setting->alur_pendaftaran_path);
+            }
+            
+            // Simpan file baru di folder 'alur-pendaftaran'
+            $path = $file->store('alur-pendaftaran', 'public'); 
+            $data['alur_pendaftaran_path'] = $path;
+        }
+
+        // 4. Update atau Simpan ke Database
+        $setting->fill($data)->save();
+
+        return back()->with('success', 'Informasi, Juknis, dan Alur Pendaftaran berhasil diperbarui.');
+    }
+
+    
 }

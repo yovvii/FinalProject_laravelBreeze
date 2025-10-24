@@ -1,11 +1,8 @@
-<p class="text-black text-center font-noto_serif text-[46px]/[34px]">Selamat Datang <br>
-    <span class="inline-block text-[14px] font-poppins tracking-wide text-gray-600">Silahkan masukkan nisn dan password untuk masuk</span>
-</p>
+<x-guest-layout>
 <form method="POST" action="{{ route('login') }}">
     @csrf
-
     <!-- NISN -->
-    <div class="mt-4">
+    <div class="">
         <label for="nisn" class="block text-sm font-medium text-gray-700">
             NISN
         </label>
@@ -38,7 +35,7 @@
 
 
     <!-- Remember Me -->
-    <div class="mt-4 flex items-center justify-between">
+    {{-- <div class="mt-4 flex items-center justify-between">
         <label for="remember_me" class="inline-flex items-center">
             <input id="remember_me" type="checkbox" class="rounded-full dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-indigo-600 shadow-sm focus:ring-indigo-500 dark:focus:ring-indigo-600 dark:focus:ring-offset-gray-800" name="remember">
             <span class="ms-2 text-sm text-gray-600 dark:text-gray-400">{{ __('Ingat Saya') }}</span>
@@ -49,15 +46,19 @@
                 {{ __('Lupa Password?') }}
             </a>
         @endif
-    </div>
+    </div> --}}
     
-    <button class="mt-5 w-full bg-gray-900 py-2 rounded-xl font-poppins">
+    <button class="mt-5 w-full bg-blue-900 py-2 rounded-xl font-poppins text-white">
         Log in
     </button>
+
+    <p class="text-center my-2 text-xs">- <span class="text-gray-400">Belum punya akun?</span> -</p>
     
-    <p class="text-black text-[14px] text-center mt-[5%]">Belum punya akun?
-        <a href="#" @click.prevent="currentView = 'register'" class="font-extrabold">
-            Registrasi
-        </a>
-    </p>
+    <button 
+    type="button"
+    onclick="window.location='{{ route('register') }}'"
+    class="w-full font-extrabold text-black bg-white border border-gray-500 rounded-xl py-2 text-center hover:bg-gray-100 transition">
+    Registrasi
+</button>
 </form>
+</x-guest-layout>

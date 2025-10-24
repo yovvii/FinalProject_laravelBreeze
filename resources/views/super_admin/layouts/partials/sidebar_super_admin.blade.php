@@ -1,16 +1,13 @@
 <div class="hidden lg:flex min-h-screen">
     <aside class="w-64 bg-blue-900 text-white flex flex-col fixed h-screen">
-        <div class="p-6 flex items-center justify-center">
-            <x-application-logo class="h-8 w-auto fill-current text-white" />
+        <div>
+            <img src="{{ asset('assets/logo_app_3.png') }}" 
+                alt="Logo Aplikasi" 
+                class="md:w-[50%] w-[50%] md:mt-5 md:mb-1 mb-0 mt-[30%] object-contain mx-auto" />
         </div>
 
         <div class="w-full grid place-items-center">
-            <div class="relative w-20">
-                {{-- <img src="{{ $siswa && $siswa->foto ? asset('storage/' . $siswa->foto) : asset('storage/profile_murid/avatar_empty.jpg') }}" alt=""
-                class="rounded-full"> --}}
-            </div>
-
-            <span class="mt-2 font-black">{{ Auth::user()->name }}</span>
+            <span class="font-black italic">{{ Auth::user()->name }}</span>
             {{-- <span class="font-light text-sm tracking-wide">{{ Auth::user()->siswa->nisn }}</span> --}}
         </div>
 
@@ -20,7 +17,7 @@
                     <a href="{{ route('super_admin.dashboard') }}" class="flex items-center px-3 py-2 rounded-lg
                     {{ request()->routeIs('super_admin.dashboard') ? 'bg-blue-500' : 'bg-blue-900 hover:bg-blue-600' }}">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-6">
-                            <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM12.735 14c.618 0 1.093-.561.872-1.139a6.002 6.002 0 0 0-11.215 0c-.22.578.254 1.139.872 1.139h9.47Z" />
+                        <path d="M10.536 3.444a.75.75 0 0 0-.571-1.387L3.5 4.719V3.75a.75.75 0 0 0-1.5 0v1.586l-.535.22A.75.75 0 0 0 2 6.958V12.5h-.25a.75.75 0 0 0 0 1.5H4a1 1 0 0 0 1-1v-1a1 1 0 1 1 2 0v1a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1V3.664l.536-.22ZM11.829 5.802a.75.75 0 0 0-.333.623V8.5c0 .027.001.053.004.08V13a1 1 0 0 0 1 1h.5a1 1 0 0 0 1-1V7.957a.75.75 0 0 0 .535-1.4l-2.004-.826a.75.75 0 0 0-.703.07Z" />
                         </svg>
                         <span class="ml-3">Dashboard</span>
                     </a>
@@ -52,10 +49,90 @@
                         <span class="ml-3">Data Murid Diterima</span>
                     </a>
                 </li>
+                {{-- Dropdown: Pengaturan Global --}}
+                <li x-data="{ open: {{ request()->routeIs('banner.index') || request()->routeIs('usia.siswa.index') || request()->routeIs('super_admin.informasi.index') || request()->routeIs('super_admin.stop.index') ? 'true' : 'false' }} }" class="mb-2">
+
+                    {{-- Tombol utama dropdown --}}
+                    <button 
+                        @click="open = !open" 
+                        class="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-blue-900 hover:bg-blue-600 text-white font-medium transition-all">
+                        <div class="flex items-center gap-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                    d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                            <span>Pengaturan Global</span>
+                        </div>
+                        <svg xmlns="http://www.w3.org/2000/svg" 
+                            :class="{ 'rotate-180': open }" 
+                            class="w-5 h-5 transform transition-transform duration-200" 
+                            fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+
+                    {{-- Isi dropdown --}}
+                    <ul x-show="open" 
+                        x-transition 
+                        class="mt-2 pl-4 space-y-1 overflow-hidden"
+                        style="display: none;">
+
+                        {{-- Banner Informasi --}}
+                        <li>
+                            <a href="{{ route('banner.index') }}" 
+                            class="flex items-center px-3 py-2 rounded-lg transition 
+                            {{ request()->routeIs('banner.index') ? 'bg-blue-500 text-white' : 'bg-blue-900 text-gray-100 hover:bg-blue-700' }}">
+                                {{-- <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4">
+                                    <path d="M5.75 7.5a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5ZM7.25 8.25A.75.75 0 0 1 8 7.5h2.25a.75.75 0 0 1 0 1.5H8a.75.75 0 0 1-.75-.75ZM5.75 9.5a.75.75 0 0 0 0 1.5H8a.75.75 0 0 0 0-1.5H5.75Z" />
+                                    <path fill-rule="evenodd" d="M4.75 1a.75.75 0 0 0-.75.75V3a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2V1.75a.75.75 0 0 0-1.5 0V3h-5V1.75A.75.75 0 0 0 4.75 1ZM3.5 7a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v4.5a1 1 0 0 1-1 1h-7a1 1 0 0 1-1-1V7Z" clip-rule="evenodd" />
+                                </svg> --}}
+                                <span class="ml-5">Banner Informasi</span>
+                            </a>
+                        </li>
+
+                        {{-- Pengaturan Usia --}}
+                        <li>
+                            <a href="{{ route('usia.siswa.index') }}" 
+                            class="flex items-center px-3 py-2 rounded-lg transition 
+                            {{ request()->routeIs('usia.siswa.index') ? 'bg-blue-500 text-white' : 'bg-blue-900 text-gray-100 hover:bg-blue-700' }}">
+                                {{-- <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4">
+                                    <path fill-rule="evenodd" d="M1 8a7 7 0 1 1 14 0A7 7 0 0 1 1 8Zm7.75-4.25a.75.75 0 0 0-1.5 0V8c0 .414.336.75.75.75h3.25a.75.75 0 0 0 0-1.5h-2.5v-3.5Z" clip-rule="evenodd" />
+                                </svg> --}}
+                                <span class="ml-5">Batas Usia</span>
+                            </a>
+                        </li>
+
+                        {{-- Pengaturan Informasi --}}
+                        <li>
+                            <a href="{{ route('super_admin.informasi.index') }}" 
+                            class="flex items-center px-3 py-2 rounded-lg transition 
+                            {{ request()->routeIs('super_admin.informasi.index') ? 'bg-blue-500 text-white' : 'bg-blue-900 text-gray-100 hover:bg-blue-700' }}">
+                                {{-- <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4">
+                                    <path fill-rule="evenodd" d="M10 3a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v9a2 2 0 0 0 2 2h8a2 2 0 0 1-2-2V3ZM4 4h4v2H4V4Zm4 3.5H4V9h4V7.5Zm-4 3h4V12H4v-1.5Z" clip-rule="evenodd" />
+                                    <path d="M13 5h-1.5v6.25a1.25 1.25 0 1 0 2.5 0V6a1 1 0 0 0-1-1Z" />
+                                </svg> --}}
+                                <span class="ml-5">Informasi Umum</span>
+                            </a>
+                        </li>
+                        
+                        {{-- Pengaturan Status Spmb --}}
+                        <li>
+                            <a href="{{ route('super_admin.stop.index') }}" 
+                            class="flex items-center px-3 py-2 rounded-lg transition 
+                            {{ request()->routeIs('super_admin.stop.index') ? 'bg-blue-500 text-white' : 'bg-blue-900 text-gray-100 hover:bg-blue-700' }}">
+                                {{-- <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4">
+                                    <path fill-rule="evenodd" d="M10 3a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v9a2 2 0 0 0 2 2h8a2 2 0 0 1-2-2V3ZM4 4h4v2H4V4Zm4 3.5H4V9h4V7.5Zm-4 3h4V12H4v-1.5Z" clip-rule="evenodd" />
+                                    <path d="M13 5h-1.5v6.25a1.25 1.25 0 1 0 2.5 0V6a1 1 0 0 0-1-1Z" />
+                                </svg> --}}
+                                <span class="ml-5">Status SPMB</span>
+                            </a>
+                        </li>
+                    </ul>
+                </li>
                 <li>
                     <form action="{{ route('logout') }}" method="POST">
                         @csrf
-                        <button type="submit" class="w-full flex items-center px-3 py-2 rounded-lg hover:bg-blue-600 bg-blue-900">
+                        <button type="submit" class="w-full flex items-center px-3 py-2 rounded-lg hover:bg-red-600 bg-red-900">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-6">
                                 <path fill-rule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25Zm-4.28 9.22a.75.75 0 0 0 0 1.06l3 3a.75.75 0 1 0 1.06-1.06l-1.72-1.72h5.69a.75.75 0 0 0 0-1.5h-5.69l1.72-1.72a.75.75 0 0 0-1.06-1.06l-3 3Z" clip-rule="evenodd" />
                             </svg>

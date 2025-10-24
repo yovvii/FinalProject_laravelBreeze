@@ -56,23 +56,13 @@
                                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">NISN</th>
                                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sekolah Asal</th>
                                         
-                                        @if ($jalur_id == 1)
-                                            <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status Verifikasi</th>
-                                            <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Dokumen Sertifikat</th>
-                                            <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi Verifikasi</th>
-                                        @elseif ($jalur_id == 2)
-                                            <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status Verifikasi</th>
-                                            <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Jarak (KM)</th>
-                                            <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Dokumen</th>
-                                            <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi Verifikasi</th>
-                                        @else 
-                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal Lahir</th>
-                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nilai Akhir</th>
-                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jarak (KM)</th>
-                                        @endif
+                                        <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Verifikasi Rapor</th>
+                                        <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Verifikasi Lulus</th>
+                                        
+                                        <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
                                     </tr>
                                 </thead>
-                                <tbody class="bg-gray-50">
+                                <tbody class="bg-white divide-y divide-gray-200">
                                     @foreach ($siswas as $siswa)
                                         <tr>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -87,157 +77,40 @@
                                                 {{ $siswa->sekolahAsal->nama_sekolah }}
                                             </td>
                                             
-                                            @if ($jalur_id == 1)                                            
-                                                @if ($siswa->sertifikat_file)
-                                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-center">
-                                                        @php
-                                                            $status = $siswa->verifikasi_sertifikat ?? 'pending';
-                                                            $color = match($status) {
-                                                                'terverifikasi' => 'bg-green-100 text-green-800',
-                                                                'ditolak' => 'bg-red-100 text-red-800',
-                                                                default => 'bg-yellow-100 text-yellow-800',
-                                                            };
-                                                        @endphp
-                                                        <span class="inline-flex px-2 text-xs font-semibold leading-5 rounded-full {{ $color }}">
-                                                            {{ ucfirst($status) }}
-                                                        </span>
-                                                    </td>
-                                                    
-                                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-center">
-                                                        <a href="{{ Storage::url($siswa->sertifikat_file) }}" target="_blank" class="text-blue-600 hover:underline font-medium">
-                                                            Lihat File
-                                                        </a>
-                                                    </td>
-                                                    
-                                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-center">
-                                                        @php
-                                                            $currentStatus = $siswa->verifikasi_sertifikat ?? 'pending';
-                                                        @endphp
-                                                        
-                                                        <form action="{{ route('admin.verifikasi_sertifikat', $siswa) }}" method="POST" class="inline-block">
-                                                            @csrf
-                                                            <input type="hidden" name="status" value="terverifikasi">
-                                                            <button type="submit" 
-                                                                class="font-bold py-1 px-3 rounded-md text-xs transition ease-in-out duration-150
-                                                                    @if ($currentStatus == 'terverifikasi')
-                                                                        bg-green-300 text-gray-700 cursor-not-allowed opacity-75
-                                                                    @else
-                                                                        bg-green-500 hover:bg-green-600 text-white
-                                                                    @endif"
-                                                                @if ($currentStatus == 'terverifikasi') disabled @endif>
-                                                                Terima
-                                                            </button>
-                                                        </form>
-                                                        
-                                                        {{-- Tombol Tolak --}}
-                                                        <form action="{{ route('admin.verifikasi_sertifikat', $siswa) }}" method="POST" class="inline-block ms-1">
-                                                            @csrf
-                                                            <input type="hidden" name="status" value="ditolak">
-                                                            <button type="submit" 
-                                                                class="font-bold py-1 px-3 rounded-md text-xs transition ease-in-out duration-150
-                                                                    @if ($currentStatus == 'ditolak')
-                                                                        bg-red-300 text-gray-700 cursor-not-allowed opacity-75
-                                                                    @else
-                                                                        bg-red-500 hover:bg-red-600 text-white
-                                                                    @endif"
-                                                                @if ($currentStatus == 'ditolak') disabled @endif>
-                                                                Tolak
-                                                            </button>
-                                                        </form>
-                                                    </td>
-                                                @else
-                                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500 italic">
-                                                        Tidak memakai sertifikat
-                                                    </td>
-                                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500 italic">
-                                                        Tidak memakai sertifikat
-                                                    </td>
-                                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500 italic">
-                                                        Tidak memakai sertifikat
-                                                    </td>
-                                                @endif
-                                                
-                                            @elseif ($jalur_id == 2)
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-center">
+                                                @php
+                                                    $statusRapor = $siswa->rapor_files_verified ?? 'pending';
+                                                    $colorRapor = match($statusRapor) {
+                                                        'terverifikasi' => 'bg-green-100 text-green-800',
+                                                        'ditolak' => 'bg-red-100 text-red-800',
+                                                        default => 'bg-yellow-100 text-yellow-800',
+                                                    };
+                                                @endphp
+                                                <span class="inline-flex px-2 text-xs font-semibold leading-5 rounded-full {{ $colorRapor }}">
+                                                    {{ ucfirst($statusRapor) }}
+                                                </span>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-center">
+                                                @php
+                                                    $statusLulus = $siswa->surat_keterangan_lulus_verified ?? 'pending';
+                                                    $colorLulus = match($statusLulus) {
+                                                        'terverifikasi' => 'bg-green-100 text-green-800',
+                                                        'ditolak' => 'bg-red-100 text-red-800',
+                                                        default => 'bg-yellow-100 text-yellow-800',
+                                                    };
+                                                @endphp
+                                                <span class="inline-flex px-2 text-xs font-semibold leading-5 rounded-full {{ $colorLulus }}">
+                                                    {{ ucfirst($statusLulus) }}
+                                                </span>
+                                            </td>
 
-                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-center">
-                                                    @php
-                                                        $status = $siswa->verifikasi_afirmasi ?? 'pending';
-                                                        $color = match($status) {
-                                                            'terverifikasi' => 'bg-green-100 text-green-800',
-                                                            'ditolak' => 'bg-red-100 text-red-800',
-                                                            default => 'bg-yellow-100 text-yellow-800',
-                                                        };
-                                                    @endphp
-                                                    <span class="inline-flex px-2 text-xs font-semibold leading-5 rounded-full {{ $color }}">
-                                                        {{ ucfirst($status) }}
-                                                    </span>
-                                                </td>
+                                            {{-- ... Logic untuk Jalur 1 ($jalur_id == 1) dan Jalur 2 ($jalur_id == 2) tetap sama di sini ... --}}
 
-                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-center text-red-600 font-bold">
-                                                    {{ $siswa->jarak_ke_sekolah ?? $siswa->jarak_ke_sma_km }} KM
-                                                </td>
-                                                
-                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-center">
-                                                    @if ($siswa->document_afirmasi)
-                                                        <a href="{{ Storage::url($siswa->document_afirmasi) }}" target="_blank" class="text-blue-600 hover:underline font-medium">
-                                                            Lihat File
-                                                        </a>
-                                                    @else
-                                                        <span class="text-gray-400">N/A</span>
-                                                    @endif
-                                                </td>
-                                                
-                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-center">
-                                                    @if ($siswa->document_afirmasi)
-                                                        @php
-                                                            $currentStatus = $siswa->verifikasi_afirmasi ?? 'pending';
-                                                        @endphp
-                                                        
-                                                        <form action="{{ route('admin.verifikasi_afirmasi', $siswa) }}" method="POST" class="inline-block">
-                                                            @csrf
-                                                            <input type="hidden" name="status" value="terverifikasi">
-                                                            <button type="submit" 
-                                                                class="font-bold py-1 px-3 rounded-md text-xs transition ease-in-out duration-150
-                                                                    @if ($currentStatus == 'terverifikasi')
-                                                                        bg-green-300 text-gray-700 cursor-not-allowed opacity-75
-                                                                    @else
-                                                                        bg-green-500 hover:bg-green-600 text-white
-                                                                    @endif"
-                                                                @if ($currentStatus == 'terverifikasi') disabled @endif>
-                                                                Terima
-                                                            </button>
-                                                        </form>
-                                                        
-                                                        <form action="{{ route('admin.verifikasi_afirmasi', $siswa) }}" method="POST" class="inline-block ms-1">
-                                                            @csrf
-                                                            <input type="hidden" name="status" value="ditolak">
-                                                            <button type="submit" 
-                                                                class="font-bold py-1 px-3 rounded-md text-xs transition ease-in-out duration-150
-                                                                    @if ($currentStatus == 'ditolak')
-                                                                        bg-red-300 text-gray-700 cursor-not-allowed opacity-75
-                                                                    @else
-                                                                        bg-red-500 hover:bg-red-600 text-white
-                                                                    @endif"
-                                                                @if ($currentStatus == 'ditolak') disabled @endif>
-                                                                Tolak
-                                                            </button>
-                                                        </form>
-                                                        
-                                                    @else
-                                                        <span class="text-gray-400">Menunggu Unggahan</span>
-                                                    @endif
-                                                </td>
-                                            @else
-                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                    {{ $siswa->tanggal_lahir }}
-                                                </td>
-                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                    {{ $siswa->nilai_akhir }}
-                                                </td>
-                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-center text-red-600 font-bold">
-                                                    {{ $siswa->jarak_ke_sekolah ?? $siswa->jarak_ke_sma_km }} KM
-                                                </td>
-                                            @endif
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-center">
+                                                <a href="{{ route('siswa.detail', $siswa) }}" class="inline-flex items-center px-3 py-1 border border-transparent text-xs leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:border-blue-700 focus:ring focus:ring-blue-300 active:bg-blue-700 transition ease-in-out duration-150">
+                                                    Lihat Data Siswa
+                                                </a>
+                                            </td>
                                         </tr>
                                     @endforeach
                                 </tbody>

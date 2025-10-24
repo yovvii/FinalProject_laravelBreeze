@@ -8,6 +8,7 @@ use App\Models\Siswa;
 use App\Models\DataSma;
 use App\Models\Semester;
 use App\Models\RaporFile;
+use App\Models\SpmbStatus;
 use App\Models\SekolahAsal;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
@@ -274,6 +275,7 @@ class SmaController extends Controller
 
             'smaLatitude' => $smaLatitude,
             'smaLongitude'=> $smaLongitude,
+
         ]);
 
     }
@@ -627,6 +629,8 @@ class SmaController extends Controller
 
     public function showPeringkatSiswa()
     {
+        $spmbStatus = SpmbStatus::first();
+        $selection_ended = $spmbStatus && $spmbStatus->status === 'closed';
         $siswa = Auth::user()->siswa;
         
         // Pastikan siswa sudah mendaftar (status completed) dan memilih SMA
@@ -639,7 +643,6 @@ class SmaController extends Controller
         $jalur_id_str = (string) $jalur_id;
 
         $kuotaJalur = 0;
-        $totalPendaftarJalur = 0;
 
         if ($sma_id) {
             // Asumsi Model DataSma tersedia
@@ -655,6 +658,19 @@ class SmaController extends Controller
             ->where('data_sma_id', $sma_id)
             ->where('jalur_pendaftaran_id', $jalur_id)
             ->where('status_pendaftaran', 'completed'); // Hanya hitung yang sudah selesai
+
+        $mandatoryVerificationColumns = [
+            'akta_file_verified',
+            'rapor_files_verified',
+            'surat_pernyataan_verified',
+            'surat_keterangan_lulus_verified',
+            'ijazah_file_verified'
+        ];
+
+        foreach ($mandatoryVerificationColumns as $column) {
+            // SEMUA dokumen wajib harus 'terverifikasi' untuk masuk peringkat
+            $query->where($column, 'terverifikasi');
+        }
 
         // 2. Tentukan urutan (Sorting) sesuai Jalur Pendaftaran
         if ($jalur_id == 1) { // Prestasi
@@ -680,21 +696,116 @@ class SmaController extends Controller
 
         // 3. Eksekusi query
         $allSiswas = $query->get();
-        
-        // 4. Hitung Peringkat Siswa yang sedang login
-        // Laravel's Collection method works well for this
-        $peringkat = $allSiswas->search(function ($item) use ($siswa) {
-            return $item->id === $siswa->id;
+
+        $documentLabels = [
+            'akta_file_verified' => 'Akta Kelahiran',
+            'rapor_files_verified' => 'Rapor Files',
+            'surat_pernyataan_verified' => 'Surat Pernyataan',
+            'surat_keterangan_lulus_verified' => 'Surat Keterangan Lulus',
+            'ijazah_file_verified' => 'Ijazah',
+            'verifikasi_afirmasi' => 'Verifikasi Afirmasi', // Hanya untuk Jalur ID 2
+        ];
+
+        $mandatoryColumns = [
+            'akta_file_verified',
+            'rapor_files_verified',
+            'surat_pernyataan_verified',
+            'surat_keterangan_lulus_verified',
+            'ijazah_file_verified'
+        ];
+
+        // Tambahkan verifikasi afirmasi jika jalurnya ID 2 (Afirmasi)
+        if ($siswa->jalur_pendaftaran_id == 2) {
+            $mandatoryColumns[] = 'verifikasi_afirmasi';
+        }
+
+        $rejectedDocs = [];
+        $statusVerifikasiSiswa = 'terverifikasi'; // Asumsi awal status terbaik
+
+        foreach ($mandatoryColumns as $column) {
+            // Ambil status, default 'pending' jika kolom kosong/null (misal, baru diunggah)
+            $status = $siswa->{$column} ?? 'pending';
+            
+            // Prioritas status: Ditolak > Pending > Terverifikasi
+            if ($status === 'ditolak') {
+                // Jika ada satu saja ditolak, status akhir pasti ditolak
+                $statusVerifikasiSiswa = 'ditolak';
+                $rejectedDocs[] = $documentLabels[$column];
+            } elseif ($status === 'pending' && $statusVerifikasiSiswa !== 'ditolak') {
+                // Jika ada pending, dan belum ada yang ditolak, status akhir jadi pending
+                $statusVerifikasiSiswa = 'pending';
+                $rejectedDocs[] = $documentLabels[$column];
+            }
+        }
+
+        $jalur_id_for_filter = $siswa->jalur_pendaftaran_id;
+
+        $verifiedSiswas = $allSiswas->filter(function ($pendaftar) use ($jalur_id_for_filter) {
+            // Kolom wajib default
+            $filterMandatoryColumns = [
+                'akta_file_verified', 'rapor_files_verified', 'surat_pernyataan_verified', 
+                'surat_keterangan_lulus_verified', 'ijazah_file_verified'
+            ];
+            
+            // Tambahkan verifikasi afirmasi jika jalurnya ID 2 (Afirmasi)
+            if ($jalur_id_for_filter == 2) {
+                $filterMandatoryColumns[] = 'verifikasi_afirmasi';
+            }
+
+            // Cek semua dokumen wajib harus 'terverifikasi'
+            foreach ($filterMandatoryColumns as $column) {
+                // Gunakan 'pending' sebagai default jika null, lalu cek apakah statusnya 'terverifikasi'
+                if (($pendaftar->{$column} ?? 'pending') !== 'terverifikasi') {
+                    return false; 
+                }
+            }
+            
+            return true; // Siswa ini lolos verifikasi wajib
         });
 
-        // Karena index dimulai dari 0, peringkat adalah index + 1
-        $peringkatSiswa = ($peringkat !== false) ? $peringkat + 1 : 'Tidak Lolos Kuota';
+        $peringkat = $verifiedSiswas->search(function ($item) use ($siswa) {
+            return $item->id === $siswa->id;
+        });
+        
+        $peringkatSiswa = '';
 
-        $statusVerifikasi = match ((int) $jalur_id) {
-            1 => $siswa->verifikasi_sertifikat ?? 'default',
-            2 => $siswa->verifikasi_afirmasi ?? 'default',
-            default => 'terverifikasi', // Anggap jalur lain (Zonasi) terverifikasi dokumennya
-        };
+        if ($statusVerifikasiSiswa === 'terverifikasi') {
+            // Jika semua dokumen wajib sudah terverifikasi, baru hitung peringkat
+            $peringkatSiswa = ($peringkat !== false) ? $peringkat + 1 : 'Diluar Kuota';
+            
+        } elseif ($statusVerifikasiSiswa === 'pending') {
+            // Jika ada satu atau lebih dokumen yang masih pending verifikasi
+            $peringkatSiswa = 'Menunggu Verifikasi';
+
+        } elseif ($statusVerifikasiSiswa === 'ditolak') {
+            // Jika ada satu atau lebih dokumen yang ditolak
+            $peringkatSiswa = 'Verifikasi Ditolak'; // Atau pesan lain yang sesuai
+
+        } else {
+            // Kasus lain, mungkin status belum jelas
+            $peringkatSiswa = 'Status Belum Ditentukan';
+        }
+        
+        // Hilangkan duplikat dan buat string
+        $rejectedDocumentsList = implode(', ', array_unique($rejectedDocs));
+
+        $statusPenerimaan = $siswa->status_penerimaan ?? '';
+        $userId = Auth::id() ?? 'guest';
+        $hasNotified = session('result_notified_' . $userId);
+
+        if ($selection_ended && in_array(strtolower($statusPenerimaan), ['diterima', 'ditolak']) && !$hasNotified) {
+            $sekolahTujuan = $siswa->dataSma->nama_sma ?? 'Sekolah Tujuan';
+            $jalur = $siswa->jalurPendaftaran->nama_jalur_pendaftaran ?? 'Pendaftaran';
+
+            if (strtolower($statusPenerimaan) === 'diterima') {
+                $message = "🎉 Selamat! Anda dinyatakan DITERIMA di {$sekolahTujuan} melalui Jalur {$jalur}.";
+                session()->flash('success', $message);
+            } else {
+                $message = "😔 Mohon Maaf. Anda dinyatakan DITOLAK di {$sekolahTujuan}. Hasil seleksi telah dirilis.";
+                session()->flash('error', $message);
+            }
+            session(['result_notified_' . $userId => true]);
+        }
 
         // 5. Kirim data ke view
         return view('registration.peringkat_murid', [
@@ -703,7 +814,9 @@ class SmaController extends Controller
             'peringkatSiswa' => $peringkatSiswa,
             'totalPendaftar' => $allSiswas->count(),
             'kuotaJalur' => $kuotaJalur,
-            'statusVerifikasiSiswa' => $statusVerifikasi,
+            'statusVerifikasiSiswa' => $statusVerifikasiSiswa,
+            'rejectedDocumentsList' => $rejectedDocumentsList,
+            'selection_ended' => $selection_ended,
         ]);
     }
 
@@ -735,6 +848,12 @@ class SmaController extends Controller
             $siswa->document_afirmasi = null;
             $siswa->verifikasi_afirmasi = 'pending';
             $siswa->status_pendaftaran = 'pending'; // Kembali ke status belum selesai
+
+            $siswa->akta_file_verified = 'pending';
+            $siswa->rapor_files_verified = 'pending';
+            $siswa->surat_pernyataan_verified = 'pending';
+            $siswa->surat_keterangan_lulus_verified = 'pending';
+            $siswa->ijazah_file_verified = 'pending';
             
             $siswa->save();
 

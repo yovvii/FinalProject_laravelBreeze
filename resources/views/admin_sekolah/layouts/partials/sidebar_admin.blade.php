@@ -1,13 +1,26 @@
 <div class="hidden lg:flex min-h-screen">
     <aside class="w-64 bg-blue-900 text-white flex flex-col fixed h-screen">
-        <div class="p-6 flex items-center justify-center">
-            <x-application-logo class="h-8 w-auto fill-current text-white" />
+        <div>
+            <img src="{{ asset('assets/logo_app_3.png') }}" 
+                alt="Logo Aplikasi" 
+                class="md:w-[50%] w-[50%] md:mt-5 md:mb-1 mb-0 mt-[30%] object-contain mx-auto" />
         </div>
 
+        @php
+            // Inisialisasi $data_sma jika belum terdefinisi
+            $data_sma = $data_sma ?? null; 
+
+            // 🔥 Adaptasi Logika: Cek apakah $data_sma ada dan punya logo
+            $logoSource = ($data_sma && $data_sma->logo_sma) 
+                ? asset('storage/' . $data_sma->logo_sma) 
+                : asset('assets/profile_sekolah_jpg/avatar_empty.jpg'); // Asumsi: Anda memiliki placeholder ini
+        @endphp
+
         <div class="w-full grid place-items-center">
-            <div class="relative w-20">
-                {{-- <img src="{{ $siswa && $siswa->foto ? asset('storage/' . $siswa->foto) : asset('storage/profile_murid/avatar_empty.jpg') }}" alt=""
-                class="rounded-full"> --}}
+            <div class="relative w-[70px] h-[70px] flex-shrink-0 bg-white rounded-full p-1"> 
+                <img src="{{ $logoSource }}" 
+                    alt="Logo {{ $data_sma->nama_sma ?? 'SMA' }}"
+                    class="rounded-full w-full h-full object-cover"> 
             </div>
 
             <span class="mt-2 font-black">{{ Auth::user()->name }}</span>
@@ -20,14 +33,14 @@
                     <a href="{{ route('admin.dashboard') }}" class="flex items-center px-3 py-2 rounded-lg
                     {{ request()->routeIs('admin.dashboard') ? 'bg-blue-500' : 'bg-blue-900 hover:bg-blue-600' }}">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-6">
-                            <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM12.735 14c.618 0 1.093-.561.872-1.139a6.002 6.002 0 0 0-11.215 0c-.22.578.254 1.139.872 1.139h9.47Z" />
+                        <path d="M8.543 2.232a.75.75 0 0 0-1.085 0l-5.25 5.5A.75.75 0 0 0 2.75 9H4v4a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1v-1a1 1 0 1 1 2 0v1a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1V9h1.25a.75.75 0 0 0 .543-1.268l-5.25-5.5Z" />
                         </svg>
                         <span class="ml-3">Dashboard</span>
                     </a>
                 </li>
                 <li>
                     <a href="{{ route('admin.jalur_pendaftaran.index') }}" class="flex items-center px-3 py-2 rounded-lg
-                    {{ request()->routeIs('admin.jalur_pendaftaran.index') || request()->routeIs('admin.jalur_pendaftaran.show') ? 'bg-blue-500' : 'bg-blue-900 hover:bg-blue-600' }}">
+                    {{ request()->routeIs('admin.jalur_pendaftaran.index') || request()->routeIs('admin.jalur_pendaftaran.show') || request()->routeIs('siswa.detail') ? 'bg-blue-500' : 'bg-blue-900 hover:bg-blue-600' }}">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-6">
                             <path fill-rule="evenodd" d="M1 3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V3Zm9 3a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm-6.25-.75a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5ZM11.5 6A.75.75 0 1 1 13 6a.75.75 0 0 1-1.5 0Z" clip-rule="evenodd" />
                             <path d="M13 11.75a.75.75 0 0 0-1.5 0v.179c0 .15-.138.28-.306.255A65.277 65.277 0 0 0 1.75 11.5a.75.75 0 0 0 0 1.5c3.135 0 6.215.228 9.227.668A1.764 1.764 0 0 0 13 11.928v-.178Z" />
@@ -56,7 +69,7 @@
                 <li>
                     <form action="{{ route('logout') }}" method="POST">
                         @csrf
-                        <button type="submit" class="w-full flex items-center px-3 py-2 rounded-lg hover:bg-blue-600 bg-blue-900">
+                        <button type="submit" class="w-full flex items-center px-3 py-2 rounded-lg hover:bg-red-600 bg-red-900">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-6">
                                 <path fill-rule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25Zm-4.28 9.22a.75.75 0 0 0 0 1.06l3 3a.75.75 0 1 0 1.06-1.06l-1.72-1.72h5.69a.75.75 0 0 0 0-1.5h-5.69l1.72-1.72a.75.75 0 0 0-1.06-1.06l-3 3Z" clip-rule="evenodd" />
                             </svg>

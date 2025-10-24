@@ -1,10 +1,8 @@
-<p class="text-black text-center font-noto_serif text-[46px]/[34px]">Selamat Datang <br>
-    <span class="inline-block text-[14px] font-poppins tracking-wide text-gray-600">Silahkan masukkan nisn, nama dan tanggal lahir</span>
-</p>
+<x-guest-layout>
 <form method="POST" action="{{ route('register') }}">
     @csrf
     <!-- NISN -->
-    <div class="mt-4">
+    <div class="">
         <label for="nisn" class="block text-sm font-medium text-gray-700">
             NISN
         </label>
@@ -47,20 +45,23 @@
         @enderror
     </div>
 
-    <p class="text-gray-400 text-sm mt-2 dark:text-gray-500">
+    <p class="text-gray-400 text-sm mt-2 dark:text-gray-500 text-center md:text-left">
         Pastikan input sesuai dengan data yang anda miliki
     </p>
 
     <button type="submit"
-        class="w-full items-center bg-gray-900 px-4 py-2 rounded-xl text-white font-poppins mt-[8%]">
+        class="w-full items-center bg-blue-900 px-4 py-2 rounded-xl text-white font-poppins mt-[8%]">
         Register
     </button>
 
-    <p class="text-black text-[14px] text-center mt-[5%]">Sudah Punya Akun?
-        <a href="#" @click.prevent="currentView = 'login'" 
-        class="font-extrabold">
-            Log in
-        </a>
-    </p>
+    <p class="text-center my-2 text-xs">- <span class="text-gray-400">Sudah punya akun?</span> -</p>
+    
+    <button 
+        type="button"
+        onclick="window.location='{{ route('login') }}'"
+        class="w-full font-extrabold text-black bg-white border border-gray-500 rounded-xl py-2 text-center hover:bg-gray-100 transition">
+        Log In
+    </button>
 
 </form>
+</x-guest-layout>

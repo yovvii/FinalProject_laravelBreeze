@@ -15,5 +15,14 @@ class SpmbStatus extends Model
     // Tentukan nama tabel
     protected $table = 'spmb_statuses';
     
-    protected $fillable = ['status'];
+    protected $fillable = [
+        'status', 
+        'closing_at', // 🔥 Tambahkan ini
+        'starting_at',
+    ];
+
+    protected $casts = [
+        'closing_at' => 'datetime', // 🔥 Atur sebagai datetime
+        'starting_at' => 'datetime',
+    ];
 }

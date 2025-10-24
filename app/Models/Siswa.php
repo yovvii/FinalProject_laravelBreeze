@@ -48,7 +48,14 @@ class Siswa extends Model
         'longitude_siswa',
         'latitude_siswa',
 
-        'has_completed_steps'
+        'has_completed_steps',
+        'result_viewed',
+
+        'rapor_files_verified',
+        'akta_file_verified',
+        'surat_pernyataan_verified',
+        'surat_keterangan_lulus_verified',
+        'ijazah_file_verified'
       ];
       
     public function user(): BelongsTo
@@ -83,12 +90,17 @@ class Siswa extends Model
     
     public function raporFiles(): HasMany
     {
-        return $this->hasMany(RaporFile::class, 'user_id');
+        return $this->hasMany(RaporFile::class, 'user_id', 'user_id');
     }
 
     public function activities()
     {
         return $this->hasMany(StudentActivity::class);
+    }
+
+    public function timelineProgress()
+    {
+        return $this->hasOne(TimelineProgress::class, 'user_id', 'user_id');
     }
     
     public function isDataLengkap()

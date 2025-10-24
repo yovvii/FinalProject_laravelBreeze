@@ -22,7 +22,8 @@ class SiswaFactory extends Factory
         $jenisKelamin = $faker->randomElement(['Laki-Laki', 'Perempuan']);
         $namaAyah = $faker->name('male');
         $namaIbu = $faker->name('female');
-        $fixedSekolahAsalId = 1; 
+        $fixedSekolahAsalId = 8; 
+        $randomDistance = mt_rand(100, 2000) / 100;
 
         return [
             // Nilai statis/FK akan di-override oleh Seeder
@@ -68,8 +69,16 @@ class SiswaFactory extends Factory
 
             // Set kolom yang tidak wajib diisi di isDataLengkap() ke NULL jika Anda tidak ingin mengisinya
             'sertifikat_file' => null,
-            'document_afirmasi' => null, 
             'status_pendaftaran' => 'completed', // Status agar tidak redirect ke timeline awal
+
+            'document_afirmasi' => 'dummy/document/afirmasi_seeder.pdf',
+            'rapor_files_verified' => 'terverifikasi',
+            'akta_file_verified' => 'terverifikasi',
+            'surat_pernyataan_verified' => 'terverifikasi',
+            'surat_keterangan_lulus_verified' => 'terverifikasi',
+            'ijazah_file_verified' => 'terverifikasi',
+            'verifikasi_afirmasi' => 'terverifikasi',
+            'jarak_ke_sma_km' => $randomDistance,
         ];
     }
 }

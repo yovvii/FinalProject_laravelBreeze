@@ -5,12 +5,16 @@ namespace App\Http\Controllers;
 use App\Models\Ortu;
 use App\Models\Mapel;
 use App\Models\Siswa;
+use App\Models\Banner;
 use App\Models\Semester;
 use App\Models\RaporFile;
+use App\Models\SpmbStatus;
 use App\Models\SekolahAsal;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
+use App\Models\GlobalSetting;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\Rule;
 use App\Traits\LogsStudentActions;
 use Illuminate\Support\Facades\DB;
 use App\Models\NotificationHistory;
@@ -82,19 +86,30 @@ class PendaftaranController extends Controller
     {
         $step = $request->input('current_step');
 
-        switch ($step) {
-            case 1:
-                $this->_saveBiodata($request);
-                break;
-            case 2:
-                $this->_saveRapor($request);
-                break;
-            case 3:
-                $this->_saveSuratPernyataan($request);
-                break;
-            case 4:
-                $this->_saveSuratKeteranganLulus($request);
-                break;
+        try {
+            switch ($step) {
+                case 1:
+                    $this->_saveBiodata($request);
+                    break;
+                case 2:
+                    $this->_saveRapor($request);
+                    break;
+                case 3:
+                    $this->_saveSuratPernyataan($request);
+                    break;
+                case 4:
+                    $this->_saveSuratKeteranganLulus($request);
+                    break;
+            }
+        } catch (\Exception $e) {
+            // Ini adalah blok untuk error selain validasi (seperti error DB yang tak terduga)
+            
+            // Log error untuk debug
+            \Illuminate\Support\Facades\Log::error("Error saving registration step {$step}: " . $e->getMessage());
+
+            // Redirect dengan pesan error umum jika terjadi error sistem/DB
+            // Karena ini bukan error validasi, kita gunakan 'error' flash session.
+            return redirect()->back()->with('error', 'Gagal menyimpan data karena kesalahan sistem tak terduga. Silakan coba lagi.');
         }
 
         $progress = Auth::user()->timelineProgress;
@@ -117,7 +132,14 @@ class PendaftaranController extends Controller
 
             // data user
             'name' => 'required|string|max:255',
-            'email' => 'nullable|string|email|max:255',
+            'email' => [
+                'nullable', 
+                'string', 
+                'email', 
+                'max:255',
+                // 🔥 ATURAN BARU: Unik di tabel 'users', kecuali user yang sedang login 🔥
+                Rule::unique('users', 'email')->ignore(Auth::id()),
+            ],
 
             // data siswa
             'jenis_kelamin' => 'nullable|string',
@@ -162,10 +184,19 @@ class PendaftaranController extends Controller
                 $siswa->foto = $request->file('foto')->store('profile_murid', 'public');
             }
             if ($request->hasFile('akta_file')) {
+                // 1. Dapatkan file yang diupload
+                $file = $request->file('akta_file');
+                
+                // 2. Jika ada file lama, hapus dulu
                 if ($siswa->akta_file && Storage::disk('public')->exists($siswa->akta_file)) {
                     Storage::disk('public')->delete($siswa->akta_file);
                 }
-                $siswa->akta_file = $request->file('akta_file')->store('akta_murid', 'public');
+                
+                // 3. Simpan file dan dapatkan path yang benar
+                $pathAkta = $file->store('akta_murid', 'public');
+
+                // 4. Update model dengan path yang sudah terverifikasi
+                $siswa->akta_file = $pathAkta;
             }
             
             $siswaData = collect($validatedData)->except([
@@ -382,6 +413,19 @@ class PendaftaranController extends Controller
         $user->load('siswa.dataSma', 'siswa.jalurPendaftaran');
         $siswa = $user->siswa;
 
+        $spmbStatus = SpmbStatus::first();
+        $selection_ended = $spmbStatus && $spmbStatus->status === 'closed';
+
+        // 2. Cek Status Siswa
+        // Asumsi: 'status_pendaftaran' di tabel Siswa berisi 'diterima' jika lolos
+        $is_accepted = $siswa && $siswa->status_penerimaan === 'diterima';
+        
+        // 3. Ambil dan Tandai Notifikasi (Kode yang sudah ada)
+        $notifications = $user->notifications()
+                            ->where('is_read', false)
+                            ->orderBy('created_at', 'desc')
+                            ->get();
+
         $notifications = $user->notifications()
                           ->where('is_read', false)
                           ->orderBy('created_at', 'desc')
@@ -394,8 +438,34 @@ class PendaftaranController extends Controller
             });
         }
 
-        // dd($notifications->toArray());
+        $banners = $this->getInformasiBanner();
+        $selection_ended = $spmbStatus && $spmbStatus->status === 'closed';
+
+        // Ambil konten informasi
+        $globalSetting = GlobalSetting::first();
+        $infoContent = $globalSetting ? $globalSetting->important_info_content : 'Informasi penting belum diatur oleh admin.';
         
-        return view('setelah_dashboard', compact('siswa', 'notifications'))->with('success', 'Proses Pembuatan Akun Telah Selesai!');
+        return view('setelah_dashboard', compact('siswa', 'notifications', 'selection_ended', 'is_accepted', 'banners', 'selection_ended', 'infoContent'))->with('success', 'Proses Pembuatan Akun Telah Selesai!');
+    }
+
+    public function getInformasiBanner()
+    {
+        // Mengambil banner yang terakhir dibuat (paling baru)
+        $banners = Banner::where('is_active', true)->orderBy('id', 'desc')->get(); 
+        return $banners; 
+    }
+
+    public function juknisPendaftaran()
+    {
+        $globalSetting = GlobalSetting::first();
+        $juknisPath = $globalSetting ? $globalSetting->juknis_pdf_path : null;
+        return view('juknis', compact('juknisPath'));
+    }
+    
+    public function alurSpmb()
+    {
+        $globalSetting = GlobalSetting::first();
+        $alurPendaftaranPath = $globalSetting ? $globalSetting->alur_pendaftaran_path : null;
+        return view('alur_spmb', compact('alurPendaftaranPath'));
     }
 }

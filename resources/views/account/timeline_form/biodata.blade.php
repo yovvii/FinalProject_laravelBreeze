@@ -1,5 +1,5 @@
 {{-- Data Siswa --}}
-<div class="border border-gray-400 p-6 rounded-lg">
+<div class="border border-gray-400 p-3 md:p-6 rounded-lg">
     <div>
         Data <span class="font-bold">Calon Murid Baru</span>
     </div>

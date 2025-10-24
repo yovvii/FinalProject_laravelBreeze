@@ -1,17 +1,19 @@
 <?php
 
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\SmaController;
 use App\Http\Middleware\IsAdminSekolah;
+use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\TimelineController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\AplicationController;
 use App\Http\Controllers\SuperAdminController;
 use App\Http\Controllers\PendaftaranController;
 use App\Http\Controllers\ProgressBarController;
 use App\Http\Controllers\AdminSekolahController;
-use App\Http\Controllers\AplicationController;
 use SebastianBergmann\CodeCoverage\Report\Html\Dashboard;
 
 Route::get('/welcome', function () {
@@ -20,6 +22,8 @@ Route::get('/welcome', function () {
 Route::get('/', function () {
     return view('landing_page');
 })->name('landing_page');
+
+Route::get('/', [HomeController::class, 'index'])->name('landing_page');
 
 // Rute untuk super admin
 Route::get('/superadmin/login', [SuperAdminController::class, 'showLoginForm'])->name('superadmin.login.form');
@@ -40,9 +44,22 @@ Route::middleware(['is_super_admin'])->prefix('super-admin')->group(function () 
     Route::put('/data-admin-sekolah/{admin}', [SuperAdminController::class, 'updateAdmin'])->name('super_admin.admin.update');
     Route::delete('/data-admin-sekolah/{admin}', [SuperAdminController::class, 'destroyAdmin'])->name('super_admin.admin.destroy');
 
+    Route::get('/start-stop', [SuperAdminController::class, 'stopStart'])->name('super_admin.stop.index');
+    Route::post('/ppdb/set-closing-time', [SuperAdminController::class, 'setSchedule'])->name('super_admin.ppdb.set_schedule');
     Route::post('/ppdb/hentikan-dan-tentukan', [SuperAdminController::class, 'stopSpmbAndDetermineAcceptance'])->name('super_admin.ppdb.stop');
     Route::get('/data-diterima', [SuperAdminController::class, 'showAcceptedStudents'])->name('super_admin.data_diterima');
     Route::post('/spmb/reset-status', [SuperAdminController::class, 'resetSpmbStatus'])->name('super_admin.spmb.reset');
+
+    Route::post('/banner/add', [SuperAdminController::class, 'storeBanner'])->name('banner.add');
+    Route::get('/banner/form', [SuperAdminController::class, 'addBanner'])->name('banner.form');
+    Route::get('/banner', [SuperAdminController::class, 'indexBanner'])->name('banner.index');
+    Route::delete('/banner/{banner}', [SuperAdminController::class, 'deleteBanner'])->name('banner.delete');
+
+    Route::get('/batas-usia', [SuperAdminController::class, 'indexUsia'])->name('usia.siswa.index');
+    Route::post('/batas-usia', [SuperAdminController::class, 'updateUsia'])->name('usia.siswa.update');
+
+    Route::get('/informasi', [SuperAdminController::class, 'showInformasi'])->name('super_admin.informasi.index');
+    Route::post('/informasi', [SuperAdminController::class, 'updateInformasi'])->name('super_admin.informasi.update');
 });
 
 // Grup rute untuk Admin Sekolah
@@ -52,7 +69,11 @@ Route::middleware([IsAdminSekolah::class])->group(function () {
     Route::get('/admin/dashboard', [AdminSekolahController::class, 'dashboard'])->name('admin.dashboard');
     Route::post('/admin/verifikasi_sertifikat/{siswa}', [AdminSekolahController::class, 'verifikasiSertifikat'])->name('admin.verifikasi_sertifikat');
     Route::get('/admin/jalur-pendaftaran', [AdminSekolahController::class, 'showJalurIndex'])->name('admin.jalur_pendaftaran.index');
+
     Route::get('/admin/jalur-pendaftaran/{jalur_id}', [AdminSekolahController::class, 'showStudentsByJalur'])->name('admin.jalur_pendaftaran.show');
+    Route::get('/siswa/{siswa}/detail', [AdminSekolahController::class, 'showSiswaDetail'])->name('siswa.detail');
+    Route::post('/siswa/{siswa}/verifikasi-dokumen/{dokumen}', [AdminSekolahController::class, 'verifikasiDokumen'])->name('admin.siswa.verifikasi_dokumen');
+
     Route::post('/admin/verifikasi-afirmasi/{siswa}', [AdminSekolahController::class, 'verifikasiAfirmasi'])->name('admin.verifikasi_afirmasi');
     Route::get('/admin/peringkat-murid', [AdminSekolahController::class, 'indexPeringkatMurid'])->name('admin.show_peringkat_murid');
     Route::get('/admin/peringkat-murid/{jalur_id}', [AdminSekolahController::class, 'showPeringkatMurid'])->name('admin.peringkat_murid.show');
@@ -100,6 +121,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/profile/reset/biodata', [ProfileController::class, 'resetBiodata'])->name('profile.reset.biodata');
     Route::post('/profile/reset/nilai', [ProfileController::class, 'resetNilai'])->name('profile.reset.nilai');
     Route::post('/profile/reset/dokumen', [ProfileController::class, 'resetDokumen'])->name('profile.reset.dokumen');
+
+    Route::get('/juknis', [PendaftaranController::class, 'juknisPendaftaran'])->name('juknis.index');
+    Route::get('/alur-spmb', [PendaftaranController::class, 'alurSpmb'])->name('alur.index');
 });
 
 require __DIR__.'/auth.php';

@@ -11,4 +11,10 @@ class RaporFile extends Model
         'semester',
         'file_rapor'
     ];
+
+    public function semester()
+    {
+        // Asumsi relasi ke model Semester
+        return $this->belongsTo(Semester::class); 
+    }
 }
