@@ -11,8 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('timeline_progress', function (Blueprint $table) {
-            $table->foreignId('sma_id')->nullable()->after('user_id')->constrained('sma_datas')->onDelete('cascade');
+        Schema::table('siswas', function (Blueprint $table) {
+            $table->foreignId('data_sma_id')->nullable()->after('user_id')->constrained('sma_datas')->cascadeOnDelete();
         });
     }
 
@@ -21,9 +21,9 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('timeline_progress', function (Blueprint $table) {
-            $table->dropForeign(['sma_id']);
-            $table->dropColumn('sma_id');
+        Schema::table('siswas', function (Blueprint $table) {
+            $table->dropForeign(['data_sma_id']);
+            $table->dropColumn('data_sma_id');
         });
     }
 };

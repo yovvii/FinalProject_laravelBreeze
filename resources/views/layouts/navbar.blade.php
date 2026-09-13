@@ -74,7 +74,7 @@
                 <a href="{{ route('profile.settings') }}" class="mt-2 font-black text-center hover:underline">
                     {{ Auth::user()->name }}
                 </a>
-                <span class="font-light text-sm tracking-wide">{{ Auth::user()->siswa->nisn }}</span>
+                <span class="font-light text-sm tracking-wide">{{ Auth::user()->siswa?->nisn ?? 'Belum Diisi' }}</span>
             </div>
 
             <nav class="flex-1 mt-6 px-5">

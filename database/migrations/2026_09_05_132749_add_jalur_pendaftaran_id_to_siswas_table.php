@@ -6,17 +6,19 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Run the migrations.
+     */
     public function up(): void
     {
         Schema::table('siswas', function (Blueprint $table) {
-            $table->foreignId('jalur_pendaftaran_id')
-                  ->nullable()
-                  ->after('data_sma_id') // Setelah kolom data_sma_id
-                  ->constrained('jalur_pendaftarans')
-                  ->onDelete('set null');
+            $table->foreignId('jalur_pendaftaran_id')->nullable()->after('user_id')->constrained('jalur_pendaftarans')->cascadeOnDelete();
         });
     }
 
+    /**
+     * Reverse the migrations.
+     */
     public function down(): void
     {
         Schema::table('siswas', function (Blueprint $table) {
